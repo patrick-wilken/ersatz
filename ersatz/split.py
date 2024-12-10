@@ -173,8 +173,9 @@ class EvalModel():
         return output_file
 
 
-    def split_delimiter(self, input_file, output_file, batch_size, delimiter, columns, candidates=None):
-        input_file = csv.reader(input_file, delimiter=delimiter)
+    def split_delimiter(self, input_file, output_file, batch_size, delimiter, columns, no_quoting=False, candidates=None):
+        kwargs = {"quoting": csv.QUOTE_NONE, "quotechar": None} if no_quoting else {}
+        input_file = csv.reader(input_file, delimiter=delimiter, **kwargs)
         for line in input_file:
             new_lines = []
             max_len = 1
@@ -228,6 +229,10 @@ def parse_args():
     tsv_group.add_argument('--delimiter', '-d', type=str, default='\t',
                         help="Delimiter character (default is \\t)\n"
                              "  * '--columns' must be set"
+                        )
+    tsv_group.add_argument('--no-quoting', action="store_true",
+                        help="If set, split fields on all tab characters. Tab characters within quotes are then not "
+                        "parsed as part of the data."
                         )
     tsv_group.add_argument('--columns', '-C', type=int, default=None, nargs="*",
                         help="Columns to split (0-indexed). If empty, plain-text\n"
@@ -289,7 +294,9 @@ def split(args):
         if args.columns is None:
             output_file = model.split(input_file, output_file, args.batch_size, candidates=candidates)
         else:
-            output_file = model.split_delimiter(input_file, output_file, args.batch_size, args.delimiter, args.columns, candidates=candidates)
+            output_file = model.split_delimiter(
+                input_file, output_file, args.batch_size, args.delimiter, args.columns, no_quoting=args.no_quoting, candidates=candidates
+            )
 
     if args.text:
         return output_file.getvalue().strip().split('\n')
